@@ -1,20 +1,20 @@
 # AI Content Intelligence Engine
 
-AI Content Intelligence Engine is an automation-first system for turning external content signals into reviewable content drafts. It uses n8n for workflow orchestration and Supabase/PostgreSQL for persistent state. Sources are normalized into a common schema, checked for duplicates, stored as signals, and can subsequently be evaluated, drafted with an LLM, and routed through human approval.
+AI Content Intelligence Engine is an automation-first system for collecting external content signals, normalizing them into a shared structure, storing them in Supabase/PostgreSQL, and preparing them for opportunity selection, LLM-assisted drafting, and human approval. n8n is the orchestration layer; Supabase provides persistent system state.
 
-The repository currently implements the database foundation and a TechCrunch RSS ingestion workflow. Semantic similarity, scoring, LLM generation, approval, and publishing integrations are represented in the architecture and schema but are not implemented.
+The repository currently contains the database foundation and an RSS-to-Supabase ingestion workflow. Semantic deduplication, scoring, LLM generation, approval, and publishing are designed extensions and are identified as such below.
 
-## System Flow
+## System Workflow
 
-1. **External signal ingestion** — RSS feeds and, later, Apify-powered scraping or external data sources supply content signals with source-specific formats.
-2. **Workflow orchestration** — n8n triggers workflows, calls external APIs, validates and routes data, performs duplicate checks, writes to the database, and is intended to coordinate retries, LLM calls, approval, and publishing.
-3. **Data normalization** — each source is converted to a shared contract: `source`, `source_type`, `title`, `content`, `source_url`, `published_at`, `engagement_score`, `relevance_score`, `metadata`, and `processing_status`.
-4. **Duplicate protection** — an item with an existing `source_url` is skipped; a new URL is inserted into `content_signals`. A partial unique index on `source_url` provides database-level protection in addition to the workflow lookup.
-5. **Content bank** — normalized signals persist in Supabase and can provide the input for ideas, drafts, and operational error records.
-6. **Semantic similarity** — pgvector is enabled for a future embedding-based similarity check that can detect related content beyond exact URL matches.
-7. **Opportunity scoring** — a future rule-based scoring layer can evaluate unique signals before generation.
-8. **LLM generation** — selected ideas can be supplied to Groq for structured analysis and content drafts.
-9. **Human approval** — generated drafts are designed to be approved, rejected, or regenerated through Telegram before they reach publishing integrations.
+1. **External signal ingestion** - RSS feeds and, later, Apify-powered scraping or other external sources provide content signals in source-specific formats.
+2. **Workflow orchestration** - n8n triggers ingestion, calls external APIs, routes and validates data, performs duplicate checks, writes to the database, and provides the control point for retries, LLM calls, approval, and future publishing workflows.
+3. **Data normalization** - Each source is mapped to a common contract: `source`, `source_type`, `title`, `content`, `source_url`, `published_at`, `engagement_score`, `relevance_score`, `metadata`, and `processing_status`.
+4. **Duplicate protection** - The workflow checks `source_url` before inserting a signal. Existing URLs are skipped; new URLs are inserted into `content_signals`. A unique database index on non-null `source_url` provides final protection against duplicate records.
+5. **Supabase content bank** - Normalized signals are retained alongside derived ideas, drafts, and operational error records.
+6. **Semantic similarity** - pgvector is enabled for a future embedding-based comparison that can identify related content beyond an exact URL match.
+7. **Opportunity scoring** - Unique signals can be evaluated using rule-based relevance, engagement, freshness, novelty, and content-gap factors before generation.
+8. **Groq LLM generation** - Selected ideas can be prepared as context and sent to Groq to produce structured drafts.
+9. **Human approval** - Generated drafts are designed to be approved, rejected, or regenerated in Telegram before entering any publishing workflow.
 
 ```text
 RSS Feeds                         Apify / External APIs
@@ -53,23 +53,23 @@ RSS Feeds                         Apify / External APIs
       Future Publishing Layer
 ```
 
-## Components and Responsibilities
+## Components
 
-| Component | Responsibility | Current status |
+| Component | Responsibility | Repository status |
 | --- | --- | --- |
-| n8n | Orchestration, API calls, validation, routing, database operations, and workflow control | RSS ingestion implemented |
-| Supabase / PostgreSQL | Persistent storage for signals, ideas, drafts, and error records | Schema implemented |
-| pgvector | Foundation for vector storage and similarity queries | Extension enabled; similarity flow not implemented |
-| Groq API | LLM inference for analysis, strategy, structured outputs, and generation | Planned |
-| RSS | External content-signal source | TechCrunch workflow implemented |
+| n8n | Workflow triggers, API calls, validation, routing, and database operations | RSS ingestion workflow implemented |
+| Supabase / PostgreSQL | Persistent storage for signals, ideas, drafts, and error records | Schema migrations implemented |
+| pgvector | Vector storage and similarity-query foundation | Extension enabled; semantic flow not implemented |
+| RSS | External signal source | TechCrunch feed configured in the exported workflow |
 | Apify | Web scraping and external data ingestion | Planned |
-| Telegram API | Human approval actions for drafts | Planned |
+| Groq API | LLM inference for analysis, strategy, structured outputs, and generation | Planned |
+| Telegram API | Draft approval actions | Planned |
 
 ## Duplicate Protection and Semantic Similarity
 
-The implemented RSS workflow checks `source_url` in Supabase before inserting a signal. The schema reinforces this with a unique partial index, so non-null URLs cannot be stored more than once. The workflow currently requires a source URL as part of validation; records that fail required-field validation do not proceed to insertion.
+The implemented RSS workflow validates required fields and requires a `source_url` before it continues to the Supabase lookup. A matching URL is routed to the skip branch; an unseen URL is inserted into `content_signals`. The schema reinforces this workflow-level check with a unique partial index, preventing duplicate non-null URLs even if a workflow insert is retried.
 
-Exact URL matching does not identify related stories published under different URLs. The intended semantic path is:
+Exact URL matching does not detect substantively similar stories published under different links. The intended semantic path is:
 
 ```text
 Content Signal
@@ -85,29 +85,29 @@ Similar Content Found?
    Skip            Continue
 ```
 
-pgvector is enabled, but no embedding column, provider, model, or similarity workflow is implemented yet. The embedding provider is intentionally independent of Groq and can be selected separately.
+pgvector is enabled, but no embedding column, provider, model, or similarity workflow is implemented. The embedding provider is intentionally decoupled from Groq and can be selected independently.
 
 ## Opportunity Scoring
 
-After duplicate checks, unique signals are intended to enter a rule-based scoring layer. The layer evaluates relevance, engagement, freshness, novelty, and content gap to calculate an opportunity score and decide whether an idea proceeds to generation. No machine-learning scoring implementation is currently present.
+After duplicate checks, unique signals are intended to enter a rule-based scoring layer. It can evaluate relevance, engagement, freshness, novelty, and content gap to calculate an opportunity score and determine whether an idea should proceed to generation. No machine-learning scoring implementation is present.
 
-## LLM Generation and Approval
+## LLM Generation and Human Approval
 
-Groq is the intended LLM inference layer for topic analysis, content strategy, structured output, and content generation. The planned path is:
+Groq is the intended LLM inference layer for topic analysis, content strategy, structured output, and content generation. The target flow is:
 
 ```text
 Selected Content Idea -> Context Preparation -> Groq LLM -> Structured Draft -> content_drafts
 ```
 
-The architecture can later use prompt roles such as researcher, strategist, critic, and writer. These roles are not yet implemented as a multi-agent workflow.
+The architecture can later support prompt roles such as researcher, strategist, critic, and writer. A multi-agent workflow is not implemented.
 
-Drafts are designed to enter a Telegram approval workflow with **Approve**, **Reject**, and **Regenerate** actions. Approval remains a human decision point before any future publishing workflow.
+Drafts are designed to pass through Telegram actions for **Approve**, **Reject**, or **Regenerate**. This keeps a human decision point between generation and any future publishing integration.
 
 ## Error Handling and Observability
 
-`workflow_errors` provides a centralized destination for n8n workflow and API failures. It records the workflow name, failed node, execution ID, error type, error message, payload, retry count, and resolution status. The table is implemented; automated error logging and retries are planned.
+`workflow_errors` is the centralized error-recording table for n8n workflows and API integrations. It stores workflow name, node name, execution ID, error type, error message, payload, retry count, and resolution status. n8n workflows can use it for centralized logging and troubleshooting.
 
-The design accommodates retry handling for HTTP 429 rate limits, authentication failures, malformed API responses, timeouts, and other third-party service failures.
+The architecture is designed to support retries for HTTP 429 rate limits, authentication failures, malformed API responses, timeouts, and third-party service failures. Automated error logging and retry handling are not yet implemented.
 
 ## Current Implementation
 
@@ -115,9 +115,9 @@ The design accommodates retry handling for HTTP 429 rate limits, authentication 
 - pgvector extension enabled in PostgreSQL
 - Database constraints and indexes, including a unique partial index on `content_signals.source_url`
 - Exported n8n RSS workflow at `n8n/workflows/01_rss_signal_ingestion.json`
-- TechCrunch RSS configured as the working feed: `https://techcrunch.com/feed`
-- RSS payload normalization for the shared signal fields
-- Required-field and source-URL validation
+- TechCrunch RSS feed configured as the working ingestion source
+- RSS payload normalization to the shared signal fields
+- Required-field validation and `source_url` presence validation
 - Supabase lookup by `source_url`, duplicate-skip routing, and insertion of unseen RSS signals into `content_signals`
 
 ## Planned Extensions
@@ -136,7 +136,7 @@ The design accommodates retry handling for HTTP 429 rate limits, authentication 
 
 | Table | Purpose |
 | --- | --- |
-| `content_signals` | Normalized source data, source metadata, processing status, and source-level relevance and engagement scores |
+| `content_signals` | Normalized source data, source metadata, processing status, and relevance and engagement scores |
 | `content_ideas` | Derived topic, angle, target audience, relevance, engagement, freshness, novelty, opportunity score, and workflow status |
 | `content_drafts` | Idea reference, target platform, headline, body, CTA, model provider, model name, prompt version, and approval status |
 | `workflow_errors` | Workflow execution errors, failed node, error type, payload, retry count, and resolution status |
@@ -169,34 +169,34 @@ workflow_errors (independent)
 
 ```text
 .
-├── README.md
-├── .env.example
-├── docs/
-│   ├── architecture.md
-│   ├── database-schema.md
-│   ├── rss-ingestion.md
-│   └── workflow.md
-├── n8n/
-│   └── workflows/
-│       └── 01_rss_signal_ingestion.json
-├── prompts/
-│   └── content_generator.md
-├── sample-data/
-│   ├── README.md
-│   └── rss-sample.json
-└── supabase/
-    └── migrations/
-        ├── 001_enable_extensions.sql
-        ├── 002_create_content_signals.sql
-        ├── 003_create_content_ideas.sql
-        ├── 004_create_content_drafts.sql
-        ├── 005_create_workflow_errors.sql
-        └── 006_create_indexes.sql
+|-- README.md
+|-- .env.example
+|-- docs/
+|   |-- architecture.md
+|   |-- database-schema.md
+|   |-- rss-ingestion.md
+|   `-- workflow.md
+|-- n8n/
+|   `-- workflows/
+|       `-- 01_rss_signal_ingestion.json
+|-- prompts/
+|   `-- content_generator.md
+|-- sample-data/
+|   |-- README.md
+|   `-- rss-sample.json
+`-- supabase/
+    `-- migrations/
+        |-- 001_enable_extensions.sql
+        |-- 002_create_content_signals.sql
+        |-- 003_create_content_ideas.sql
+        |-- 004_create_content_drafts.sql
+        |-- 005_create_workflow_errors.sql
+        `-- 006_create_indexes.sql
 ```
 
 ## Environment Configuration
 
-Copy `.env.example` to a local `.env` file and populate local values without committing the file. The example contains variable names only:
+Copy `.env.example` to a local `.env` file and populate it locally; never commit the resulting file. The example contains variable names only:
 
 ```dotenv
 SUPABASE_URL=
@@ -209,15 +209,15 @@ TELEGRAM_CHAT_ID=
 N8N_WEBHOOK_URL=
 ```
 
-Configure n8n credentials through n8n's secure credential store. Do not hardcode keys or tokens in workflow JSON files or source control.
+Configure n8n credentials through n8n's secure credential store rather than hardcoding values in workflow JSON files or source control.
 
 ## Design Principles
 
 - n8n handles orchestration rather than heavy business logic.
 - Supabase is the persistent system state.
-- Every ingestion source normalizes into one common schema.
-- Duplicate protection operates at both the workflow and database levels.
+- Ingestion sources normalize into one common schema.
+- Duplicate protection operates at both workflow and database levels.
 - LLM and embedding providers are decoupled.
-- Human approval sits between generation and publishing.
+- Human approval sits between AI generation and publishing.
 - Credentials remain outside source control.
 - Workflow JSON files are version-controlled without secrets.
