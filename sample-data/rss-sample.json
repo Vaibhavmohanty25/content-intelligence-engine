@@ -1,0 +1,22 @@
+{
+  "feed": {
+    "title": "Synthetic Engineering Digest",
+    "link": "https://example.test/feed",
+    "description": "Synthetic RSS feed data for local normalization documentation."
+  },
+  "item": {
+    "title": "A practical pattern for normalizing RSS signals",
+    "link": "https://example.test/articles/rss-normalization-pattern",
+    "content": "Example article content used only to demonstrate field normalization.",
+    "contentSnippet": "Example article summary.",
+    "description": "Fallback description if richer fields are unavailable.",
+    "author": "Avery Example",
+    "categories": [
+      "automation",
+      "content-operations"
+    ],
+    "guid": "synthetic-guid-rss-normalization-pattern",
+    "isoDate": "2026-09-16T08:30:00.000Z",
+    "pubDate": "Tue, 16 Sep 2026 08:30:00 GMT"
+  }
+}

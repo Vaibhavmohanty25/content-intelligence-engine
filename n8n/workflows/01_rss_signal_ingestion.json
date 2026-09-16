@@ -1,0 +1,412 @@
+{
+  "name": "01_rss_signal_ingestion",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0b39e965-7213-4eaf-b45e-12315adc693c",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "https://techcrunch.com/feed",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "f372adf6-fba5-4101-bddc-1558309a865c",
+      "name": "RSS Read"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "00796380-c6b0-49b3-b22e-c64b72e7245b",
+              "name": "source",
+              "value": " Google DeepMind",
+              "type": "string"
+            },
+            {
+              "id": "191d977f-fcc0-4457-8459-dc840c42a271",
+              "name": "source_type",
+              "value": "rss",
+              "type": "string"
+            },
+            {
+              "id": "0c2e75bb-450d-4ed5-985e-b044fb52fc0f",
+              "name": "title",
+              "value": "={{$json.title}}",
+              "type": "string"
+            },
+            {
+              "id": "604853dc-5cfc-4b0e-bc7e-085ffac463ec",
+              "name": "content",
+              "value": "={{$json.content || $json.contentSnippet || $json.description}}",
+              "type": "string"
+            },
+            {
+              "id": "f23fa4c2-38be-43e6-8ed4-8cddca7adb12",
+              "name": "source_url",
+              "value": "={{$json.link}}",
+              "type": "string"
+            },
+            {
+              "id": "a1fdacf7-0add-45d4-846b-ce498322123b",
+              "name": "published_at",
+              "value": "={{$json.isoDate || $json.pubDate}}",
+              "type": "string"
+            },
+            {
+              "id": "153f2f08-2c92-44a7-a1e3-1c02e0cfac06",
+              "name": "engagement_score",
+              "value": "0",
+              "type": "string"
+            },
+            {
+              "id": "3a363bbb-33bb-4138-92d3-ecc9a1a0f858",
+              "name": "relevance_score",
+              "value": "0",
+              "type": "string"
+            },
+            {
+              "id": "34830a40-e1ca-43a2-ad3c-0d4668a63cce",
+              "name": "processing_status",
+              "value": "new",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "abdc6130-759b-4600-bb07-e986001d8264",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cbde219b-5c33-4691-8ebf-821a149d2be5",
+              "leftValue": "={{$json.title}} ",
+              "rightValue": " is not empty",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "2f837be7-6036-46fb-98aa-49ced02a6717",
+              "leftValue": "={{$json.source_url}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cc3ef7ea-0532-402a-bb0b-13e8d45d304c",
+              "leftValue": "={{$json.source_type}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "54e73159-b17b-41b6-b426-ce33b4fc7bc1",
+      "name": "Validate required fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d3f56b4f-7bba-4886-8dde-4a8dd6e04cd0",
+              "leftValue": "={{$json.source_url}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "108882d1-9bc5-456f-8665-5147a344f444",
+      "name": "Source URL Present?"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "content_signals",
+        "limit": 5,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "source_url",
+              "condition": "eq",
+              "keyValue": "={{$json.source_url}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -128
+      ],
+      "id": "c2f6e98b-fb4d-4e20-b96f-8a07d118167a",
+      "name": "Get many rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "ePgI9tuWzaVXVZHp",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b146d397-fb36-4bd6-9c40-2baae01b3fc7",
+              "leftValue": "={{$json.id}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        -192
+      ],
+      "id": "80b271ae-efff-4615-a3aa-2b6ab97071c3",
+      "name": "Existing node?"
+    },
+    {
+      "parameters": {
+        "tableId": "content_signals",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "source",
+              "fieldValue": "={{ $('Edit Fields').all()[$itemIndex].json.source}}"
+            },
+            {
+              "fieldId": "source_type",
+              "fieldValue": "={{ $('Edit Fields').all()[$itemIndex].json.source_type }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $('Edit Fields').all()[$itemIndex].json.title }}"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('Edit Fields').all()[$itemIndex].json.content }}"
+            },
+            {
+              "fieldId": "source_url",
+              "fieldValue": "={{ $('Edit Fields').all()[$itemIndex].json.source_url }}"
+            },
+            {
+              "fieldId": "published_at",
+              "fieldValue": "={{ $('Edit Fields').all()[$itemIndex].json.published_at }}"
+            },
+            {
+              "fieldId": "engagement_score",
+              "fieldValue": "={{ Number($('Edit Fields').all()[$itemIndex].json.engagement_score) }}"
+            },
+            {
+              "fieldId": "relevance_score",
+              "fieldValue": "={{ Number($('Edit Fields').all()[$itemIndex].json.relevance_score) }}"
+            },
+            {
+              "fieldId": "processing_status",
+              "fieldValue": "={{ $('Edit Fields').all()[$itemIndex].json.processing_status }}"
+            },
+            {
+              "fieldId": "metadata",
+              "fieldValue": "{}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        -96
+      ],
+      "id": "4bf9fd08-8952-4d52-86c9-181266075a46",
+      "name": "Create a row",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "ePgI9tuWzaVXVZHp",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Validate required fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate required fields": {
+      "main": [
+        [
+          {
+            "node": "Source URL Present?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source URL Present?": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Existing node?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Existing node?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "df7fba88-ebcb-4fc7-86f5-c027ee0a4707",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "43405b089ade6f8bca0602ecfc7f702721e652391e6169f1b19f9cf52d88bd9a"
+  },
+  "nodeGroups": [],
+  "id": "OvUNHbOiJ5rQodP7",
+  "tags": []
+}

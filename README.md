@@ -34,12 +34,12 @@ Telegram Approval
 
 ## Status
 
-Phase 1 - Supabase Database Foundation
+Phase 2 - RSS Signal Ingestion
 
 ## Current Progress
 
 - Repository scaffold complete
-- Supabase schema designed
-- pgvector extension prepared
-- Content signal, idea, draft and workflow error tables defined
-- API ingestion not yet implemented
+- Phase 0 project setup complete
+- Phase 1 Supabase database foundation complete
+- Phase 2 RSS ingestion workflow documentation in progress
+- RSS ingestion has not yet been built or executed in n8n
