@@ -34,4 +34,12 @@ Telegram Approval
 
 ## Status
 
-Phase 0 - Project Setup
+Phase 1 - Supabase Database Foundation
+
+## Current Progress
+
+- Repository scaffold complete
+- Supabase schema designed
+- pgvector extension prepared
+- Content signal, idea, draft and workflow error tables defined
+- API ingestion not yet implemented
